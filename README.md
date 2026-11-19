@@ -1,30 +1,12 @@
-# When a foothold margin runs out of room
+# Choosing a route through uncertain foothold edges
 
-How much usable terrain does a footstep planner give up for a larger edge margin? This experiment lets a planner see an imperfect map and gives an independent evaluator the true patch boundaries. It counts routes that cross an edge and feasible routes that the planner turns down.
+On 1,400 bottleneck maps, two planners accepted the same 1,026 layouts at an 8 mm edge margin. The travel-minimizing planner returned 754 routes that fit the true terrain. Maximizing the smallest clearance along the route returned 910. The extra 156 valid routes came from changing the path inside the accepted set. [Travel criterion](results.csv?plain=1#L104) · [Widest-path criterion](results.csv?plain=1#L109) · [Clearance propagation](run.py#L59)
 
-**Maintainer** · Vedant Thaker  
-**Research materials** · [Manuscript (PDF)](manuscript.pdf) · [Editable manuscript](manuscript.md) · [Planning results](results.csv)
+![Accepted and valid routes across planning conditions](figure.png)
 
-![Trade-off between accepted routes and geometrically valid routes across foothold planning conditions](figure.png)
+The planner sees six rows of uncertain patches. A separate evaluation uses their actual boundaries. Each foot has a half-width of 23 mm. Within the declared map model, an 8 mm center shift and a 6 mm inward edge loss can combine, so a 14 mm margin covers both. On the bottleneck maps this protected all 289 accepted routes, while rejecting 1,046 layouts for which a feasible route existed on the finite graph. Increasing the map errors by a factor of 1.75 produced 130 edge crossings among those same 289 routes.
 
-## The planning experiment
-
-A route crosses six rows, each with two patches and three candidate foot positions per patch. Every step must satisfy the lateral reach limit. For a 23 mm foot half-width, available clearance is the distance from the foot center to the nearer perceived edge, less 23 mm. The ordinary planner minimizes lateral travel and deviation from the travel line. A second planner first maximizes the smallest clearance anywhere on the route.
-
-The map generator allows a patch-center shift of up to 8 mm and an additional inward loss at either edge of up to 6 mm. A 14 mm margin therefore protects the full footprint within this error envelope. An oracle solves the same finite graph using the true boundaries. This gives a denominator for feasible routes rejected by the planner.
-
-## A narrow patch changes the trade-off
-
-In the 1,400-layout bottleneck test with independent patch shifts, 1,335 layouts had a feasible route. Both 8 mm strategies accepted the same 1,026 layouts. Changing the route objective returned 156 more valid routes on balance.
-
-| Route objective | Margin | Accepted | Valid | Invalid | Feasible layouts rejected |
-|---|---:|---:|---:|---:|---:|
-| Travel | 0 mm | 1,400 | 247 | 1,153 | 0 |
-| Travel | 8 mm | 1,026 | 754 | 272 | 310 |
-| Widest route | 8 mm | 1,026 | 910 | 116 | 310 |
-| Travel | 14 mm | 289 | 289 | 0 | 1,046 |
-
-Making the map errors 1.75 times larger left the perceived terrain unchanged. Of the same 289 routes accepted by the 14 mm travel rule, 130 then crossed a true edge. These are footprint checks on a finite lateral graph. Other foot placements and full-body balance constraints can change which terrain is usable.
+These counts describe geometric footprint and reach. They leave whole-body balance and physical execution open. [Planning results](results.csv) · [Methods](manuscript.md) · [Paper PDF](manuscript.pdf)
 
 ## A source foot-plant label and a displacement budget
 
@@ -58,3 +40,5 @@ python make_figure.py
 ```
 
 Run `python run.py --timings` to refresh [the optional timing sample](timings.csv). It measures a single corrected-patch map update and replanning call for 160 layouts. Machine-dependent solve times exclude perception, communication and physical execution.
+
+Maintained by Vedant Thaker.
