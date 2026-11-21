@@ -1,7 +1,6 @@
-"""Independently verify archived route counts and source foot-plant fixtures."""
+"""Independently verify archived route counts."""
 import csv
 from itertools import product
-from math import isclose
 from pathlib import Path
 
 
@@ -52,27 +51,6 @@ def check_routes():
             "Out-of-envelope stress result differs")
 
 
-def check_plants():
-    records = read("soma_results.csv")
-    indexed = {(int(r["speed_mm_s"]), float(r["duration_s"])): r for r in records}
-    grid = set(product((0, 15, 35, 60, 90, 180), (.25, .5, 1.)))
-    require(len(records) == len(grid) and indexed.keys() == grid, "Unexpected plant fixture grid")
-    accepted = 0
-    for (speed, duration), row in indexed.items():
-        labeled = int(row["plant_accepted"])
-        accepted += labeled
-        excursion = speed * duration
-        require(labeled == int(speed <= 60), f"Archived decision differs at {speed} mm/s for {duration} s")
-        require(int(row["frames"]) == round(120*duration) + 1 and isclose(float(row["excursion_mm"]), excursion),
-                f"Sampling or excursion differs at {speed} mm/s for {duration} s")
-        require(isclose(float(row["required_margin_if_transferred_mm"]), 14.+excursion),
-                f"Conditional displacement budget differs at {speed} mm/s for {duration} s")
-        if speed == 60:
-            require(isclose(float(row["confidence"]), .69), "60 mm/s confidence differs")
-    require(accepted == 12, f"Expected 12 accepted source segments, obtained {accepted}")
-
-
 if __name__ == "__main__":
     check_routes()
-    check_plants()
-    print("Verified 120 planning conditions, the 14 mm certificate, the stressed case and 18 SOMA fixtures.")
+    print("Verified 120 planning conditions and the within-envelope bound.")

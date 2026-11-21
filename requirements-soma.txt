@@ -1,2 +1,0 @@
--r requirements.txt
-warp-lang==1.14.0

@@ -1,9 +1,10 @@
 cff-version: 1.2.0
-message: "Please use this citation when referring to the research software."
+message: "Please cite this software when reusing its methods."
 type: software
-title: "When a foothold margin runs out of room"
+title: "Route coverage under bounded and probabilistic foothold-edge errors"
 authors:
   - family-names: Thaker
     given-names: Vedant
 repository-code: "https://github.com/VEDANT1602/foothold-margin-planning"
-abstract: "Footstep coverage and edge error on uncertain terrain, with an NVIDIA SOMA contact-label experiment."
+date-released: 2026-11-21
+license: MIT
