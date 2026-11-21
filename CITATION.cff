@@ -1,7 +1,7 @@
 cff-version: 1.2.0
-message: "Please cite this software when reusing its methods."
+message: "Please cite this software if you use it."
 type: software
-title: "Route coverage under bounded and probabilistic foothold-edge errors"
+title: "Can a laser reference corroborate foot placements selected from stereo terrain maps?"
 authors:
   - family-names: Thaker
     given-names: Vedant

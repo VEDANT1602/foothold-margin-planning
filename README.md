@@ -1,18 +1,12 @@
-# Route coverage under bounded and probabilistic foothold-edge errors
+# Can a laser reference corroborate foot placements selected from stereo terrain maps?
 
-Vedant Thaker · November 21, 2026
+Technical report by Vedant Thaker, Independent Researcher, Jeffersonville, Indiana. Correspondence: vedant.thaker1602@gmail.com.
 
-A foothold planner can protect accepted routes by rejecting terrain that a different route could traverse. This study measures that cost on a six-row lateral graph.
+A stereo map can support a sequence of apparently level footprints even when a second sensor has insufficient coverage to evaluate them. A fixed-heading foot-placement graph was replayed on all 194 labeled KITTI Stereo 2012 scenes. In 193 usable terrain frames, 965 lane queries compared a local nearest-step rule with graph search. With five of nine cells required per footprint and a 10 cm height-range limit, the search proposed 468 paths. The registered laser map supported 326 under the same rule, contradicted 18 and left 124 unresolved. Adding 10 cm of map clearance reduced the counts to 199 supported, three contradicted and 69 unresolved. Requiring complete laser coverage of every footprint corroborated none of the original 468 paths and still contradicted 15. The result identifies which landing decisions a real second sensor can dispute and how much accepted coverage is lost to a clearance margin. No physical steps were executed.
 
-- [Revised manuscript (PDF)](manuscript.pdf) · [Editable manuscript](manuscript.md)
-- [Revision code, results and reproduction instructions](revision/supplement/) · [Preparation record](revision/PREPARATION.md)
-- [Baseline software and results at the study commit](https://github.com/VEDANT1602/foothold-margin-planning/tree/ea643183cd45389eefb7fef70d8833efe30a5891) · [Software license](LICENSE) · [Third-party terms](LICENSING.md)
-
-## Earlier study and reproduction instructions
-
-The following instructions and results describe the original study. The revised paper and its supplemental tests are linked above.
-
-### Reproduce the planning baseline
-
-Install the baseline requirements, run python run.py, then python verify.py. The root verifier checks all 120 planning conditions and the deterministic 14 mm bound. The original mixed-scope source, third-party notices and its original instructions remain in the [pinned baseline](https://github.com/VEDANT1602/foothold-margin-planning/tree/ea643183cd45389eefb7fef70d8833efe30a5891).
-
+- [Read the paper](manuscript.pdf)
+- [Read the plain-text manuscript](manuscript.md)
+- [Reproduce the analysis and inspect the source and data records](study/README.md)
+- [Software license](LICENSE) and [third-party terms](LICENSING.md)
+- [Preparation record](study/PREPARATION.md)
+- [Previous manuscript and supplements](https://github.com/VEDANT1602/foothold-margin-planning/tree/6e6751dac579e40a6da626b90d13b8f34ccf6a48)

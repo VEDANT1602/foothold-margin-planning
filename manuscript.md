@@ -1,135 +1,94 @@
-# Route coverage under bounded and probabilistic foothold-edge errors
+# Can a laser reference corroborate foot placements selected from stereo terrain maps?
 
-**Vedant Thaker**  
-Independent Researcher, Jeffersonville, Indiana, United States  
-Correspondence: vthaker1@asu.edu  
+Vedant Thaker  
+Independent Researcher, Jeffersonville, Indiana, USA  
+vedant.thaker1602@gmail.com
+
 21 November 2026
 
-## Abstract
+### Abstract
 
-A foothold planner can protect accepted routes by rejecting terrain that a different route could traverse. This study measures that cost on a six-row lateral graph. Under a bounded map-error model, a 14 mm margin certified 289 of 1,400 bottleneck layouts and rejected 1,046 of the 1,335 layouts with a feasible route. A separate comparison converted a published RGB-D edge-noise measurement into range-dependent margins with a 5% route failure budget. With centered Gaussian edge errors at that measured scale, the chance-constrained travel planner accepted 1,170 routes, of which 1,167 fit. A fixed 14 mm rule accepted 289 and all fit. Adding an unmodeled shared 25 mm displacement made all 1,170 chance-planned routes invalid. Explicitly allowing for that displacement left no bottleneck route eligible. The two models distinguish an assumed bound from a probability under a specified error law. The sensor experiment supplies edge precision; a measured terrain-frame registration error is still needed for a deployment claim.
+A stereo map can support a sequence of apparently level footprints even when a second sensor has insufficient coverage to evaluate them. A fixed-heading foot-placement graph was replayed on all 194 labeled KITTI Stereo 2012 scenes. In 193 usable terrain frames, 965 lane queries compared a local nearest-step rule with graph search. With five of nine cells required per footprint and a 10 cm height-range limit, the search proposed 468 paths. The registered laser map supported 326 under the same rule, contradicted 18 and left 124 unresolved. Adding 10 cm of map clearance reduced the counts to 199 supported, three contradicted and 69 unresolved. Requiring complete laser coverage of every footprint corroborated none of the original 468 paths and still contradicted 15. The result identifies which landing decisions a real second sensor can dispute and how much accepted coverage is lost to a clearance margin. No physical steps were executed.
 
-## The denominator for a foothold decision
+## A route can outlive its sensor evidence
 
-A footstep plan may be invalid even when the map contains a valid route. Conversely, a planner that rarely accepts a map can place every accepted step inside its patch and still decline most usable terrain. These cases can be counted separately when the evaluator knows the true boundaries. This study uses a modest graph so that the rejection of feasible layouts can be measured directly.
+A legged planner must decide whether a surface has enough support for a foot. Nearest-foothold adaptation and longer-horizon search can both return a path on a map with gaps. A second sensor offers a direct test of the chosen landings, provided it observes them. Counting every uncontradicted path as successful hides this distinction. This study preserves three outcomes for each selected route: agreement on all landings, at least one measured contradiction, or insufficient reference coverage.
 
-Deits and Tedrake optimize placements over convex terrain regions [1]. Tonneau and colleagues’ SL1M handles combinatorial surface selection with reachability and quasi-static constraints [2]. Grandia and colleagues infer foothold constraints from perception for model-predictive control [3]. Here the decision precedes dynamics. It asks whether all six prescribed lateral placements fit, whether any six-placement route could fit on the same graph, and how many layouts a protective cutoff excludes.
+KITTI Stereo 2012 pairs roadway stereo images with a laser-derived disparity reference [1]. These recordings allow a specific question: when two sensing modalities inspect the same footprints, how does a margin change agreement, contradiction and the number of rejected lanes? The benchmark supplies observations for the map-level decision. A car collected the images and a foot-placement lattice was overlaid offline. There are no force, slip, step-tracking or robot-stability measurements.
 
-## Layout generator and route objectives
+## Two terrain maps for each scene
 
-Each layout has six ordered rows and two patches per row. A row-wide center offset is uniform in [−26, 26] mm. Lane offsets are −36 and +36 mm, with independent jitter uniform in [−9, 9] mm per patch. Perceived half-widths are uniform in [39, 60] mm, except on bottleneck rows three and five where they are uniform in [25, 42] mm. A foot half-width is 23 mm. Each patch supplies its center and two offsets equal to ±0.65 times the residual half-width after allowing for the foot. This gives six candidates per row. Reach is at most 56 mm per lateral move, starting at zero. Forward order is fixed.
+The input is the complete public training split of 194 static scenes [1]. OpenCV StereoSGBM, in three-way mode, estimates disparity from the rectified grayscale pair [2]. Its fixed settings use 96 disparity levels, a 5-pixel matching block and a uniqueness ratio of 10. The reference comes from KITTI’s non-occluded disparity product constructed from registered laser sweeps. It contains gaps after projection and manual exclusion of ambiguous regions. Stereo and laser share the calibration and the coordinate frame; these residuals therefore omit common frame error.
 
-For candidate x on the perceived interval [l,r], clearance is min(x−l,r−x) − 23 mm. A travel-minimizing route must clear margin m at all six positions. Its cost is the sum of lateral move lengths plus 0.25 times the sum of absolute candidate coordinates. The widest route first maximizes its minimum clearance and breaks ties with this cost. At a common cutoff both objectives admit the same layouts, since a feasible path at m exists exactly when the largest attainable minimum clearance is at least m. Dynamic programming selects each route.
+Each disparity source is back-projected with the supplied rectified camera matrices. A robust plane fit to central stereo points in a nominal road-height band defines the origin and up direction. No laser value enters the plane estimate or route selection. Points in front of the camera are rasterized at 0.10 m resolution over a 9 × 9 m region beginning 6 m ahead. A cell receives the median height of its points if at least two contribute. One scene (000030) failed the frame test, leaving 193 scenes and 965 of the 970 possible lane queries. The two maps had 897,930 common observed cells. Across scenes the median of the scene-wise median absolute height differences was 14.0 mm, with interquartile range 12.1–16.2 mm. Such an error summary gives no guarantee that the chosen steps agree.
 
-The evaluator shifts each patch laterally by up to 8 mm in either direction and moves each edge inward by an additional 0–6 mm. These quantities are uniform over their ranges. The signed center shift is either shared over the map or drawn independently per patch. Candidate centers retain their commanded world positions. A second dynamic-programming pass tests whether any valid route exists on the same discrete graph under the true boundaries. Independent exhaustive enumeration checks two layouts per split, error scale and shift-correlation setting.
+A footprint spans 3 × 3 cells. The observed heights must lie within 0.40 m above or below the estimated ground plane, and their range must be at most 0.06, 0.10 or 0.15 m. We vary the minimum observed count between five, seven and nine cells. Missing heights are never filled. With a partial footprint, a passing decision refers only to the available cells. The five- and seven-cell rules were examined after the complete-cell rule produced zero stereo routes. This is an exploratory benchmark.
 
-## A bound on lateral footprint containment
+## Local adaptation and look-ahead on a common graph
 
-Each individual edge can move inward by at most 8 + 6 = 14 mm. Thus m = 14 mm leaves at least zero true clearance at every accepted step, even under fully correlated errors. Scaling both error ranges by s gives the sufficient bound 14s mm. If actual foot-center tracking error can also move a footprint by at most d mm measured in that terrain frame, the sufficient margin becomes 14s + d. The inequality addresses the assigned patch’s lateral boundaries only.
+Each scene supplies five equally spaced lane centerlines. A query requests 15 alternating foot placements spaced 0.40 m forward, spanning 5.60 m. The nominal left/right offsets are −0.20 m and +0.20 m. On intermediate rows, 17 candidate lane offsets span ±0.80 m at 0.10 m spacing. Consecutive lane offsets can change by at most 0.20 m, in addition to the nominal alternation. The first and last offsets are fixed at zero, giving up to 223 nodes per query. The model fixes heading and does not represent body or swing-foot collisions.
 
-The primary study uses 600 wide calibration layouts (seed 1708), 1,400 wide test layouts (8508) and 1,400 bottleneck test layouts (9508). Multiple objectives, margins and error scales reuse each layout. The unit for comparing objectives is one complete layout. The tabulated counts are observed under these generator settings.
+The local rule chooses the reachable admissible site closest to the nominal foot position. Villarreal et al. used this principle after applying their robot-specific reach, terrain and collision checks [3]. The global comparator searches a finite set of alternating footstep actions, following the planning structure of Chestnutt et al. [4]. Here all edges advance one row, so dynamic programming exactly minimizes the sum of absolute lane offset and absolute change in offset, in grid cells. The code and action set are specific to this replay. The published ASIMO system used A* with its own state-dependent actions and controller.
 
-![Outcomes for the travel-minimizing planner across all six primary margins on 1,400 bo](figure-1.png)
+For each rule, the stereo map alone supplies eligible sites. The global planner can additionally exclude centers lying within 0.10 or 0.20 m of a failed or insufficiently observed center, using Euclidean grid-center distance. The laser reference then evaluates the selected route at the same 15 locations. Agreement requires all to qualify. Contradiction requires one or more observable landings violating the height rules. Other accepted paths remain unresolved. A separate laser-only graph search records whether any qualifying route exists in that lane. An unresolved selected path can coexist with another fully assessable path.
 
-Figure 1. Outcomes for the travel-minimizing planner across all six primary margins on 1,400 bottleneck layouts, original independent-shift error model. Returned and valid counts can separate before the certified margin is reached.
+## Clearance trades confirmed coverage for fewer contradictions
 
-## Coverage and paired validity at a fixed cutoff
+At the five-cell, 0.10 m height-range rule, the local selector found 429 paths; global search found 468. Of the 626 lanes admitting a laser-reference route, 250 were rejected by the local selector and 219 by the global search. Adding 0.10 m of clearance to that search rejected 386 of the 626. It removed 15 observed contradictions from the aggregate count, while the number of reference-supported paths fell by 127. The lane, footprint and sensor settings must accompany either comparison.
 
-Table 1 gives independent patch shifts at the original error scale. Of 1,400 bottleneck layouts, 1,335 have a feasible graph route. At 8 mm, both planners admit 1,026 maps. On 162, only the widest route was valid. On six, only the travel route was valid. The net gain was 156 routes, or 11.14 percentage points across all 1,400 layouts (approximate pointwise 95% Monte Carlo interval 9.42–12.86). The interval uses the standard error of paired layout differences. The same net gain is 15.20 percentage points within the accepted subset.
+The measured contradictions are a lower bound on contradictions among all proposed paths. With 124 unresolved outcomes, the no-margin graph’s potential count ranges from 18 to 142 of 468 if the missing evidence could resolve either way. On the same interpretation, 0.10 m clearance gives 3 to 72 of 271. These are identification bounds under the selected footprint rule. No independence assumption about successive landings or overlapping lanes is needed.
 
-At 14 mm, 289 plans fit and 1,046 of 1,335 feasible layouts were rejected (78.4%). Switching to a shared patch shift changes the feasible denominator to 1,322 and leaves the 289 accepted plans unchanged. Terrain shape matters. All 1,400 wide test layouts were accepted and valid at 14 mm with independent shifts. A 12 mm travel cutoff produced four invalid routes in 600 wide calibration layouts and 16 in 1,400 wide test layouts.
 
-| Objective | Margin (mm) | Accepted | Valid | Invalid | Feasible rejected |
+| Stereo policy | Proposed | Agree | Disagree | Unknown | Feasible lanes rejected |
 | --- | --- | --- | --- | --- | --- |
-| Travel | 0 | 1,400 | 247 | 1,153 | 0 |
-| Widest | 0 | 1,400 | 1,022 | 378 | 0 |
-| Travel | 8 | 1,026 | 754 | 272 | 310 |
-| Widest | 8 | 1,026 | 910 | 116 | 310 |
-| Travel | 12 | 517 | 514 | 3 | 818 |
-| Widest | 12 | 517 | 516 | 1 | 818 |
-| Travel | 14 | 289 | 289 | 0 | 1,046 |
+| Local nearest | 429 | 306 | 14 | 109 | 250 |
+| Graph | 468 | 326 | 18 | 124 | 219 |
+| Graph + 0.10 m | 271 | 199 | 3 | 69 | 386 |
+| Graph + 0.20 m | 130 | 98 | 2 | 30 | 507 |
+Table 1. Five occupied cells required per footprint in each map, 0.10 m height-range limit. Each row covers the same 965 lane queries. The final column counts stereo rejections among 626 laser-reference-feasible lanes.
 
-Table 1. Held-out bottleneck layouts, independent shifts, original error envelope. A valid route has six supported footprints. Rejected-feasible counts use the graph oracle.
+## What changes when the reference must see all nine cells?
 
-## How quickly the certificate consumes the terrain
+Keeping the original 468 paths fixed while demanding a complete nine-cell laser footprint at every landing leaves zero fully corroborated routes. Fifteen contain at least one completely observed violation. The remaining 453 are unresolved. The analogous test on the 271 paths with a 0.10 m margin finds one contradicted and 270 unresolved. Five sampled cells can corroborate an observed height range, while a hazard on one of the other four cells could go undetected.
 
-The supplemental sweep keeps the same layout IDs and error draws, varying the edge-error multiplier. A fixed 14 mm travel margin always selects the same 289 plans because the perceived map never changes. At 1.25 times the original error, 11 of those plans fail. Enlarging the margin to the new bound of 17.5 mm certifies 18 plans but rejects 1,235 feasible layouts. For multipliers 1.50 and 1.75 the required margins exceed 19 mm, the largest possible midpoint clearance on a bottleneck row (42 − 23 mm). No bottleneck route can meet either sufficient bound on this generator. At 1.75 times the error, all 130 invalid routes under the original 14 mm rule still had a different valid graph route.
+Changing both maps to seven cells cut proposed paths from 468 to 188. Changing both to nine eliminated them despite 23 laser-feasible lane queries. Varying the height-range limit while retaining the five-cell rule had a smaller effect on proposed routes (Table 2). The result depends on the chosen 0.10 m grid, coverage requirement and route length. Counting the five lanes per scene as independent replicates would understate their shared scene and calibration effects.
 
-| Error scale | Feasible maps | Failures at 14 mm / 289 | Bound (mm) | Certified plans |
-| --- | --- | --- | --- | --- |
-| 1.00 | 1,335 | 0 | 14.0 | 289 |
-| 1.25 | 1,253 | 11 | 17.5 | 18 |
-| 1.50 | 1,142 | 63 | 21.0 | 0 |
-| 1.75 | 1,032 | 130 | 24.5 | 0 |
 
-Table 2. Independent shifts, 1,400 bottleneck maps and travel objective. Certified plans use the scaled error bound. Zero coverage is a geometric consequence of the bottleneck width.
+| Cells required | Height range (m) | Proposed | Agree | Disagree | Unknown | Laser feasible |
+| --- | --- | --- | --- | --- | --- | --- |
+| 5 | 0.06 | 445 | 307 | 18 | 120 | 612 |
+| 5 | 0.10 | 468 | 326 | 18 | 124 | 626 |
+| 5 | 0.15 | 483 | 341 | 11 | 131 | 642 |
+| 7 | 0.10 | 188 | 39 | 10 | 139 | 317 |
+| 9 | 0.10 | 0 | 0 | 0 | 0 | 23 |
+Table 2. Unmargined graph search on the same 965 lanes. Each row applies the indicated cell and height rules to both sensors.
 
-## Range-dependent margins from measured depth-camera edge precision
+![Figure 1. The same 468 selected stereo routes evaluated with two laser coverage rules. The narrower red segment contains 18 contradicted routes at five cells and 15 at nine. Complete reference coverage confirms no entire route.](study/laser-coverage.png)
 
-Nguyen, Izadi and Lovell measured fluctuations of object-boundary pixels with a Kinect depth camera and fit a lateral standard-deviation model [4]. Equations 1–2 give σ(z,θ) = 1000 z [0.8 + 0.035 θ/(90° − θ)]/585 mm for range z in metres and this focal length in pixels. The benchmark assigns equally spaced ranges from 0.75 to 2.50 m to the six rows and fixes incidence at 30°. The resulting standard deviations span 1.05–3.49 mm. Using sensor-plane edge noise as the lateral coordinate error of a horizontal support map is a transfer assumption; it omits camera pose, viewpoint-dependent systematic errors and fusion.
+## What the margin means in a robot
 
-For each edge draw a zero-mean Gaussian perturbation with this standard deviation. The planning constraint aims to keep the probability of any of twelve one-sided edge violations at or below 0.05. Equal allocation sets each tail probability to 0.05/12; the travel planner requires a row margin Φ⁻¹(1 − 0.05/12)σ. These margins range from 2.77 to 9.22 mm. Summing individual edge risks bounds failure for the six selected steps, without requiring independence, provided their conditional marginal laws are correctly specified. The implementation generates independent local residuals; all policies see the same maps and evaluation draws. This is a finite-graph adaptation of chance-constrained planning, using the equal-risk allocation discussed by Blackmore, Ono and Williams [5].
+Villarreal et al. observed about 2.5 cm of short-term map drift after roughly 2 m of robot motion and separately reported 3 cm uncertainty around nominal foothold prediction [3]. Neither quantity sets a KITTI map margin. The grid erosion here removes candidates close to an observed failure or coverage boundary. It does not bound drift, and a single-frame comparison cannot reproduce drift accumulation.
 
-The benchmark reuses the 1,400 held-out bottleneck maps and 1,400 wide maps with fresh error draws (seeds 21909 and 21908). The risk level is a design setting. On bottlenecks, the chance planner returned 1,170 routes, 1,167 of which fit. The fraction invalid among accepted routes was 0.26% (Wilson 95% interval 0.09–0.75%). On wide terrain it returned all 1,400 routes; one failed. The union bound is conservative here because many feasible candidates have more clearance than the required quantile.
-
-| Planner | Accepted | Valid | Feasible rejected | Mean travel (mm) |
-| --- | --- | --- | --- | --- |
-| Travel, 0 mm | 1,400 | 1,104 | 0 | 51.3 |
-| Travel, 8 mm | 1,026 | 1,023 | 373 | 84.7 |
-| Widest, 8 mm | 1,026 | 1,025 | 373 | 113.2 |
-| Travel, 14 mm | 289 | 289 | 1,110 | 119.9 |
-| Chance, 5% | 1,170 | 1,167 | 229 | 73.7 |
-
-Table 3. Bottleneck maps under centered, range-dependent Gaussian edge errors. Of the 1,400 layouts, 1,399 had a feasible graph route. Travel is averaged across accepted routes, which differ by policy.
-
-## A common map displacement changes the answer
-
-Villarreal and colleagues observed about 2.5 cm of short-term map drift after approximately 2 m of robot travel [6]. In the benchmark stress test a common 25 mm lateral translation is applied to every patch on a map, with two equally likely signs. The published observation sets its magnitude; interpreting it as a constant lateral shift is a deliberate perturbation, not a distribution fitted to that robot. Local edge residuals and candidate positions remain as in the centered trial.
-
-Only 177 of the 1,400 shifted bottleneck layouts had a feasible route on the fixed graph. All 1,170 routes selected under the centered chance model failed. Including the 25 mm allowance on top of the quantile margin eliminated every bottleneck route, since even the largest allowable midpoint clearance on a narrow row is 19 mm. On the wide layouts, 33 of 1,400 centered-model plans fit after the shift, while the drift-aware chance planner accepted one route and it fit. These counts depend on leaving the candidate graph fixed in the commanded terrain frame. Online re-registration or placing new candidates was outside the comparison.
-
-## Interpretation and physical scope
-
-Choosing a route and deciding whether to accept a map can be evaluated separately. The widest-route choice recovered 156 valid routes on balance at a fixed 8 mm cutoff in the bounded-error experiment. The range-dependent criterion served 881 more bottleneck layouts than the fixed 14 mm cutoff under the centered precision model and produced three invalid routes. Those numbers refer to different error laws and different feasible-layout denominators.
-
-The evidence covers lateral footprint containment and reach, not locomotion stability, slip, yaw, or a robot’s ability to track a commanded center. Pointwise sensor precision does not bound shared pose error. A physical follow-up needs co-registered support boundaries and foot trajectories across repeated bottleneck approaches, including bias, spatial correlations, occlusions and the layouts the planner declines. With those data the same oracle accounting can test calibration out of sample.
+The two maps agree on some partial footprints and explicitly disagree on others. Their missing observations sharply limit what can be concluded about a whole path, even when typical height residuals are small. A field decision requires tracked robot foot poses, an independently surveyed or contact-labeled support surface, and repeated traversals that include rejected terrain. Only those data could connect the map disagreement measured here to a probability of stepping failure.
 
 ## Data and code availability
 
-The baseline repository contains the original planning code and 120-row results.csv. In that checkout, python run.py regenerates the planning CSV. The accompanying supplement provides sensitivity.py, sensor_planner.py, their generated CSVs, planning-only Linux environment locks, commands and the hash of the imported benchmark module.
+The KITTI Stereo 2012 data and calibration are available from https://www.cvlibs.net/datasets/kitti/eval_stereo_flow.php?benchmark=stereo . The accompanying supplement gives exact input hashes, software versions, route classifications, summary tables and reproduction commands. The KITTI-derived tables retain CC BY-NC-SA 3.0 attribution and terms. Source imagery and laser measurements remain with the provider.
 
-[Pinned baseline](https://github.com/VEDANT1602/foothold-margin-planning/tree/ea643183cd45389eefb7fef70d8833efe30a5891) · [Revision code and data](https://github.com/VEDANT1602/foothold-margin-planning/tree/main/revision/supplement) · [Preparation record](https://github.com/VEDANT1602/foothold-margin-planning/blob/main/revision/PREPARATION.md)
+[Study files, software and source records](https://github.com/VEDANT1602/foothold-margin-planning/tree/main/study)
 
-## Computational verification
+## Author and disclosures
 
-The baseline planning rerun reproduced the 120-row results.csv byte for byte. Exhaustive candidate enumeration checked the dynamic program on a subset. A paired reanalysis verified fixed-cutoff acceptance equality and the 162 favorable and six unfavorable reversals. The range-dependent experiment regenerated 24 policy/terrain/bias cells. Counts reconcile as valid plus invalid equals accepted throughout. All calculations used Python 3.12.14 and NumPy 2.3.5.
+Vedant Thaker is the sole author and set the research question. OpenAI Codex assisted with processing the stereo and laser reference measurements, implementing the planning comparisons and drafting the analysis.
 
-## Author contribution
-
-Vedant Thaker is the sole author. He designed the original foothold planning study, wrote its manuscript, developed its original software, and requested the comparisons and checks reported in this revision.
-
-## Use of computational assistance
-
-OpenAI Codex assisted with the bounded and probabilistic margin calculations, paired planning replays, stress tests for common displacement, and translation of published camera error measurements into terrain scenarios, as well as literature checks and preparation of the revised text. The author set the research question and requested the revision.
-
-## Funding
-
-This research received no specific grant from any funding agency in the public, commercial, or not-for-profit sectors.
-
-## Competing interests
-
-The author declares no competing interests.
+This research received no specific grant from any funding agency in the public, commercial, or not-for-profit sectors. The author declares no competing interests.
 
 ## References
 
-[1] R. Deits and R. Tedrake. Footstep Planning on Uneven Terrain with Mixed-Integer Convex Optimization. IEEE-RAS International Conference on Humanoid Robots, 2014. https://doi.org/10.1109/HUMANOIDS.2014.7041373
+[1] A. Geiger, P. Lenz and R. Urtasun. Are we ready for autonomous driving? The KITTI Vision Benchmark Suite. IEEE Conference on Computer Vision and Pattern Recognition, 3354–3361, 2012. <https://doi.org/10.1109/CVPR.2012.6248074>
 
-[2] S. Tonneau, D. Song, P. Fernbach, N. Mansard, M. Taïx and A. Del Prete. SL1M: Sparse L1-norm Minimization for Contact Planning on Uneven Terrain. IEEE International Conference on Robotics and Automation, 6604–6610, 2020. https://doi.org/10.1109/ICRA40945.2020.9197371
+[2] OpenCV. StereoSGBM class reference, version 4.12.0. Disparity matching API and implementation settings. <https://docs.opencv.org/4.12.0/d2/d85/classcv_1_1StereoSGBM.html>
 
-[3] R. Grandia, F. Jenelten, S. Yang, F. Farshidian and M. Hutter. Perceptive Locomotion Through Nonlinear Model-Predictive Control. IEEE Transactions on Robotics 39(5), 3402–3421, 2023. https://doi.org/10.1109/TRO.2023.3275384
+[3] O. Villarreal, V. Barasuol, M. Camurri, L. Franceschi, M. Focchi, M. Pontil, D. G. Caldwell and C. Semini. Fast and continuous foothold adaptation for dynamic locomotion through CNNs. IEEE Robotics and Automation Letters 4(2), 2140–2147, 2019. <https://doi.org/10.1109/LRA.2019.2899434>
 
-[4] C. V. Nguyen, S. Izadi and D. Lovell. Modeling Kinect Sensor Noise for Improved 3D Reconstruction and Tracking. Second International Conference on 3D Imaging, Modeling, Processing, Visualization & Transmission, 524–530, 2012. https://doi.org/10.1109/3DIMPVT.2012.84
-
-[5] L. Blackmore, M. Ono and B. C. Williams. Chance-Constrained Optimal Path Planning With Obstacles. IEEE Transactions on Robotics 27(6), 1080–1094, 2011. https://doi.org/10.1109/TRO.2011.2161160
-
-[6] O. Villarreal, V. Barasuol, M. Camurri, L. Franceschi, M. Focchi, M. Pontil, D. G. Caldwell and C. Semini. Fast and Continuous Foothold Adaptation for Dynamic Locomotion Through CNNs. IEEE Robotics and Automation Letters 4(2), 2140–2147, 2019. https://doi.org/10.1109/LRA.2019.2899434
+[4] J. Chestnutt, M. Lau, G. Cheung, J. Kuffner, J. Hodgins and T. Kanade. Footstep planning for the Honda ASIMO humanoid. IEEE International Conference on Robotics and Automation, 629–634, 2005. <https://publications.ri.cmu.edu/footstep-planning-for-the-honda-asimo-humanoid>
