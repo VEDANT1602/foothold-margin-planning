@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "Please cite this software if you use it."
 type: software
-title: "Can a laser reference corroborate foot placements selected from stereo terrain maps?"
+title: "How much of a candidate foothold does a second terrain map observe?"
 authors:
   - family-names: Thaker
     given-names: Vedant
