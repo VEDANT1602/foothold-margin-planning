@@ -120,10 +120,12 @@ def analyze(pts,pose,survey,search):
     common=np.isfinite(robot)&np.isfinite(ref)
     errors=abs(robot[common]-ref[common])
     results=[]
+    # Survey points can lie exactly 0.100 m apart. Accept equality under float64 roundoff.
+    limit = .1 + 1e-10
     for k in (3,5,7,9):
-        selected=candidates&(n>=k)&(z<=.1)
+        selected=candidates&(n>=k)&(z<=limit)
         for l in ((k,9) if k!=9 else (9,)):
-            observed=m>=l;passes=observed&(height<=.1)
+            observed=m>=l;passes=observed&(height<=limit)
             counts=(candidates.sum(),selected.sum(),(selected&passes).sum(),(selected&observed&~passes).sum(),(selected&~observed).sum())
             if counts[1]!=sum(counts[2:]):raise ArithmeticError('Incomplete outcome accounting')
             results.append((k,l,*counts))
@@ -133,12 +135,35 @@ def write(path,head,rows):
     with path.open('w',newline='') as f:
         w=csv.writer(f);w.writerow(head);w.writerows(rows)
 
+def anchored_online_poses(filename, reference, anchor_seconds=0):
+    """Use the opening calibration interval to place relative CompSLAM motion in the survey frame."""
+    expected = 'f78c45d70144d8927ba7d8ae4d85bb395be4311872871ec8435bcc912b9c775b'
+    if hashlib.sha256(filename.read_bytes()).hexdigest() != expected:
+        raise ValueError("Unexpected published ANYmal 1 in-operation trajectory")
+    online = np.loadtxt(filename)
+    if online.shape != reference.shape or not np.allclose(online[:, 0], reference[:, 0], rtol=0, atol=1e-6):
+        raise ValueError("Trajectory sampling differs from the reference")
+    if np.any(np.diff(online[:, 0]) <= 0):
+        raise ValueError("Unordered CompSLAM timestamps")
+    estimated = Rotation.from_quat(online[:, 4:])
+    initial = online[:, 0] <= online[0, 0] + anchor_seconds
+    # Fit orientation from paired attitudes, then translation conditional on that rotation.
+    initial_rotations = Rotation.from_quat(reference[initial, 4:]) * estimated[initial].inv()
+    alignment = initial_rotations.mean()
+    translation = np.mean(reference[initial, 1:4] - alignment.apply(online[initial, 1:4]), axis=0)
+    positions = alignment.apply(online[:, 1:4]) + translation
+    attitudes = (alignment * estimated).as_quat()
+    return np.column_stack([online[:, 0], positions, attitudes])
+
 def main():
     p=argparse.ArgumentParser()
     group=p.add_mutually_exclusive_group(required=True)
     group.add_argument('--bag',type=Path,help='Complete published ANYmal 1 raw sensor bag')
     group.add_argument('--chunks',type=Path,help='Offline local excerpts named chunk<bag_byte_offset>.bin')
     p.add_argument('--poses',required=True,type=Path);p.add_argument('--survey',required=True,type=Path)
+    p.add_argument('--online-poses',type=Path,help='Optional in-operation CompSLAM TUM trajectory; anchor its initial pose only')
+    p.add_argument('--anchor-seconds', choices=[0, 10], type=int, default=0,
+                   help='Initial calibration window; 0 uses only the first pose, 10 averages opening poses')
     p.add_argument('--out',type=Path,default=HERE)
     args=p.parse_args()
     if hashlib.sha256(args.survey.read_bytes()).hexdigest()!=SURVEY_SHA:raise ValueError("Unexpected Finals survey")
@@ -149,7 +174,10 @@ def main():
     if survey.shape!=(1000000,3):raise ValueError('Unexpected survey dimensions')
     search=cKDTree(survey[:,:2]);traj=poses(args.poses)
     with (HERE/'quadruped_input_manifest.csv').open() as f:targets=list(csv.DictReader(f))
-    out=[];frames=[]
+    online = anchored_online_poses(args.online_poses, traj, args.anchor_seconds) if args.online_poses else None
+    out=[];frames=[];online_rows=[];online_frames=[]
+    anchor_time=traj[0,0]
+
     for row in targets:
         offset=int(row['bag_byte_offset'])
         if args.bag:
@@ -159,10 +187,24 @@ def main():
         seq,t,pts=first_scan(raw)
         ix=np.argmin(abs(traj[:,0]-t))
         if seq!=int(row['scan']) or abs(traj[ix,0]-t)>.005:raise ValueError('Scan/pose registration mismatch')
+        if not t > anchor_time + args.anchor_seconds:
+            raise ValueError("Evaluation scan coincides with or precedes the alignment")
+        if online is not None:
+            comparison, metrics = analyze(pts, online[ix], survey, search)
+            online_rows.extend((seq, *row) for row in comparison)
+            position_gap = np.linalg.norm(online[ix, 1:4] - traj[ix, 1:4])
+            attitude_gap = (Rotation.from_quat(online[ix, 4:]).inv() * Rotation.from_quat(traj[ix, 4:])).magnitude()
+            online_frames.append((seq, t-anchor_time, position_gap, np.rad2deg(attitude_gap), *metrics))
         outcomes,frame=analyze(pts,traj[ix],survey,search)
         out.extend((seq,*v) for v in outcomes);frames.append((seq,*frame))
     args.out.mkdir(exist_ok=True,parents=True)
     write(args.out/'quadruped_footprints.csv',FIELDS,out)
     write(args.out/'quadruped_frames.csv',['scan','common_cells','median_absolute_height_gap_m'],frames)
+
+    if online is not None:
+        prefix = 'online_10s' if args.anchor_seconds else 'online'
+        write(args.out/(prefix+'_footprints.csv'), FIELDS, online_rows)
+        write(args.out/(prefix+'_frames.csv'), ['scan','seconds_since_anchor','position_gap_m',
+              'orientation_gap_degrees','common_cells','median_absolute_height_gap_m'], online_frames)
 
 if __name__=='__main__':main()

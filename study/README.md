@@ -1,48 +1,50 @@
-# From stereo terrain heights to fixed-heading foot-placement decisions
+# Survey corroboration of ANYmal C floor patches
 
-The replay uses all 194 labeled KITTI Stereo 2012 training pairs. The camera system was mounted on a car. These records do not contain robot foot contacts. Script and compact numerical outputs are supplied, without images, pixel labels, laser scans, terrain grids or upstream software.
+The study compares 30 lidar scans from the first ANYmal C robot at the DARPA Subterranean Challenge finals with the organizer's separate, downsampled course survey. The test uses either survey-registered scan poses or the motion estimated onboard during the run. This supplement contains code, a scan manifest and aggregate results. The externally hosted sensor records, survey and pose trajectories are required to rerun the reconstruction.
 
-### Inputs
+## Inputs
 
-Download the archives directly from the [KITTI benchmark](https://www.cvlibs.net/datasets/kitti/eval_stereo_flow.php?benchmark=stereo). The exact AWS URLs and hashes are below. Retain the files as ZIP archives.
+Obtain the following files from the [ETH data record](https://doi.org/10.3929/ethz-b-000552248) under **Access the files → CERBERUS_Darpa_Subt_Final_Event → anymal_1**. The dataset maintainers [describe the run-time CompSLAM trajectory, post-processed products and survey-based registration](https://github.com/leggedrobotics/cerberus_darpa_subt_datasets#final-event).
 
-| Archive | SHA-256 |
-|---|---|
-| [Stereo data](https://s3.eu-central-1.amazonaws.com/avg-kitti/data_stereo_flow.zip) | 3414457882744991709c0ee97360f04bf437f1814196dfc77d7783605113eb13 |
-| [Calibration](https://s3.eu-central-1.amazonaws.com/avg-kitti/data_stereo_flow_calib.zip) | 89c7535c7f53ad5ef267b94e3680f0cdd5f9b09e751befe10d5b72ed6b714981 |
+| File under anymal_1 | Identification |
+| --- | --- |
+| 2021-09-23-16-31-51_anymal-cerberus_mission_raw_sensors.bag | 24,591,132,760 bytes. Each consumed byte range has its own SHA-256 in quadruped_input_manifest.csv. |
+| trajectories/gt_ros1.bag | SHA-256 0fb919c8addede3828da84316e6170b309ac5707e03bd3ef5da533188d77a854 |
+| trajectories/1_compslam/compslam_tum.csv | SHA-256 f78c45d70144d8927ba7d8ae4d85bb395be4311872871ec8435bcc912b9c775b |
 
-Use Python 3.12 and `requirements.txt`. From the supplemental directory, execute the following.
+Download **data/systems_final.pcd** from the [pinned DARPA survey release](https://github.com/subtchallenge/systems_finals_ground_truth/tree/8276a16155eddf966e4458e40054bc53a31c8ac5). Its SHA-256 is 7c1502d83767de3dd112d23c294739a6c481bfbe6abb0f4d3ba563dac35ed0f7. The parser checks the input hashes.
+
+## Reproduce the results
+
+With Python 3.12, install the dependencies and set the two input paths below. The raw bag uses its original filename, and the two trajectory files retain their downloaded directory structure. From this directory run:
 
 ```sh
 python -m pip install -r requirements.txt
-sha256sum data_stereo_flow.zip data_stereo_flow_calib.zip
-OPENBLAS_NUM_THREADS=1 python terrain_routes.py data_stereo_flow.zip data_stereo_flow_calib.zip --jobs 3
-python verify.py
+robot_data=/path/to/anymal_1
+course_survey=/path/to/systems_final.pcd
+for anchor in 0 10; do
+  OPENBLAS_NUM_THREADS=1 python quadruped_check.py \
+    --bag "$robot_data/2021-09-23-16-31-51_anymal-cerberus_mission_raw_sensors.bag" \
+    --poses "$robot_data/trajectories/gt_ros1.bag" \
+    --online-poses "$robot_data/trajectories/1_compslam/compslam_tum.csv" \
+    --survey "$course_survey" --anchor-seconds "$anchor" --out rerun
+done
+python verify.py rerun
 ```
 
-### Files and units
+For the released summaries only, run `python verify.py`. The full-bag and `--chunks` modes read the same byte ranges. For the latter, save each range as `chunk<bag_byte_offset>.bin`; the manifest gives its length and SHA-256. The three largest source files remain with the providers.
 
-- `scene_metrics.csv` summarizes common, observed 10 cm grid cells for each scene. Height errors compare two distinct measurements in the same stereo-estimated coordinate frame. One fit, scene 000030, failed the frame rule. The zero common-cell count records that exclusion, with empty error fields.
-- `routes.csv` contains 34,740 decision records, one for each scene/lane/policy/coverage/roughness combination on the 193 valid frames. Lane offset is in cells of 10 cm. The data include no individual pixel, terrain-height measurement, footstep coordinate, or image. The fields `validated` and `strict_confirmed` mean laser-map agreement under the stated sampling rule. They say nothing about physical walking. The strict fields always demand nine cells in the laser footprint for each landing to contribute evidence. Unknown routes have no observed violation and at least one unassessed landing.
-- `summary.csv` aggregates by policy and design condition. `reference_feasible` requires a path on the laser map under the matched coverage rule. `rejected_reference_feasible` is its intersection with stereo rejection.
-- `verify.py` checks every partition and runs an independently written A* solver on randomized masks to test graph-optimal costs and infeasibility decisions. Tie-breaking may select different optimal paths.
-- `references.md` describes experimental scope, prior evidence and the earlier simulation's denominator.
+## Selection and interpretation
 
-### Rights and attribution
+Thirty of the 32 evenly spaced targets spanning the middle 90% of the reference trajectory yielded sensor segments; the two last target segments were unavailable. Each selected segment contributed one complete rotation. Every scan header matches a reference and online trajectory timestamp. The reconstruction uses strongest-return VLP-16 packets, nominal beam angles and a single pose per rotation. The registered branch uses the reference pose supplied at each scan time. The online branch uses relative motion from the contemporaneous CompSLAM estimates, anchored by the first reference pose. A calibration sensitivity averages relative attitudes and translations over the first 10 seconds (101 earlier pose pairs). With one opening pose, the earliest evaluated scan occurs 71.10 seconds after the anchor. Both CompSLAM tests use the original set of accepted scan identifiers; the grid and which tiles qualify are recomputed for each placement.
 
-KITTI is the work of Andreas Geiger, Philip Lenz and Raquel Urtasun (CVPR 2012). Its [copyright notice](https://www.cvlibs.net/datasets/kitti/index.php) applies [CC BY-NC-SA 3.0 Unported](https://creativecommons.org/licenses/by-nc-sa/3.0/) to the data and benchmarks. All three released CSVs are numerical results created by converting the published stereo pairs and laser-derived disparity into cell-height and route-replay summaries. These CSVs are shared under CC BY-NC-SA 3.0, with this attribution and description of modifications. The repository's MIT software license applies to original code. It does not relicense KITTI material.
+The grid has 0.10-m cells, 340 disjoint candidate tiles per scan and a target radius of 2.5–4.0 m. The floor band extends from 1.4 to 0.2 m below the sensor. A tile meets the height-range rule if its observed maxima and minima are separated by at most 0.10 m. The implementation adds 1e-10 m solely to include floating-point representations of exact decimal boundary values. On scan 7417, tile index 681, a seven-cell survey span is represented as 0.10000000000000009 m: the inclusive rule supports it. A literal binary cutoff assigns it to the other category. This explains the five-cell registered count difference of one from the previous public version (104/13/73 here versus 103/14/73).
 
-To regenerate the manuscript figure, install Matplotlib 3.10.8 and run `python plot.py`.
+- `quadruped_input_manifest.csv` identifies original scan sequences, raw byte ranges, timestamps and return counts.
+- `quadruped_footprints.csv`, `online_footprints.csv` and `online_10s_footprints.csv` contain a row for each scan and coverage condition for the three placements in manuscript Table 2.
+- The corresponding `*_frames.csv` files report the full-window quantities. The online files additionally record elapsed time since the first pose, and differences in position and orientation from the provider's registered trajectory. They contain no pose coordinates.
+- Cells absent from either map remain unobserved. The patch counts and scan-level height discrepancies quantify partial geometric agreement. They do not constitute contact measurements or independent trial-level replicates.
 
-## Registered ANYmal lidar and DARPA course survey
+[Input terms](../LICENSING.md) · [Source locations](references.md)
 
-Obtain `anymal_1/2021-09-23-16-31-51_anymal-cerberus_mission_raw_sensors.bag` (24,591,132,760 bytes) and `anymal_1/trajectories/gt_ros1.bag` from the **Access the files** link of the [ETH record](https://doi.org/10.3929/ethz-b-000552248). The research archive lists “In Copyright – Non-Commercial Use Permitted.” See its [rights statement](https://rightsstatements.org/page/InC-NC/1.0/) before reusing source data. The [organizer's survey](https://github.com/subtchallenge/systems_finals_ground_truth/tree/8276a16155eddf966e4458e40054bc53a31c8ac5) is `data/systems_final.pcd`. The two SHA-256 digests below identify the pose bag and the survey. For the raw sensor bag `quadruped_input_manifest.csv` gives a SHA-256, length and seek position for every consumed range. These files need no network access once obtained.
-
-```sh
-python quadruped_check.py --bag /data/2021-09-23-16-31-51_anymal-cerberus_mission_raw_sensors.bag --poses /data/gt_ros1.bag --survey /data/systems_final.pcd --out rerun
-```
-
-- Pose-bag SHA-256 `0fb919c8addede3828da84316e6170b309ac5707e03bd3ef5da533188d77a854`; survey SHA-256 `7c1502d83767de3dd112d23c294739a6c481bfbe6abb0f4d3ba563dac35ed0f7`.
-- Thirty target scan segments were available out of 32 equally spaced targets over the middle 90% of the published pose timestamps. The last two segments were unavailable to this analysis. For each target we found the nearest indexed chunk with at least one `/lidar/packets` message and took its first rotation. The input manifest fixes the exact selected scans. Points come from the strongest-return mode, VLP-16 nominal elevation sequence and 2-mm distance scale. Horizontal azimuth is interpolated within each 12-block packet, with the last block reusing the penultimate azimuth increment. Points use ROS x-forward/y-left/z-up. Packet deskew, beam-specific factory corrections and local ICP refinements are omitted. The published scan-pose stamp equals the scan header timestamp in all 30 samples. We checked the direct transform against floor and wall returns and applied it as supplied. The source authors registered individual VLP-16 scans to the DARPA survey to derive the referenced trajectory; that shared alignment precludes independent localization evaluation.
-- `quadruped_footprints.csv` gives one row per frame and observed-cell rule. A frame has 340 disjoint square tiles with centers between radii 2.5 m and 4 m, 0.1 m cells, a −1.4 to −0.2 m floor-height window and 0.1 m observed-height-range tolerance. At least one return sets a cell height. Overhangs and material friction are outside the definition. `quadruped_frames.csv` gives the shared-cell counts and median absolute height difference in the full grid. Neither individual raw sensor points nor the external survey, sensor frames or trajectory values are redistributed.
-- The existing KITTI-derived outputs remain covered by the upstream CC BY-NC-SA 3.0 terms and original attribution. Study software and third-party data have distinct licenses. The paper reports aggregate counts for the legged-robot check. Inclusion or relicensing of any source data or derivative road products requires checking the relevant terms for the specific outlet.
+The verification script also reports coverage as (supported + contradicted) / selected and the conditional contradiction fraction as contradicted / (supported + contradicted). Its leave-one-scan range uses all selected patches from the other 29 scans as the denominator each time. Overlapping ground coverage precludes interpreting that range as a population confidence interval.

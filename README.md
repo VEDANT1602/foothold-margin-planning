@@ -1,11 +1,9 @@
 # How much of a candidate foothold does a second terrain map observe?
 
-Terrain mapping study by Vedant Thaker, Independent Researcher, Jeffersonville, Indiana, USA.
+Terrain mapping study by Vedant Thaker, Independent Researcher, Jeffersonville, Indiana, USA. Revised November 24, 2026.
 
-**Research period (author-reported)** · October 5–21, 2026 &nbsp; | &nbsp; **Manuscript revised** · November 21, 2026
-
-A patch of ground can appear level when a robot observes only part of it. Thirty lidar scans from an ANYmal C traverse of the Louisville Mega Cavern were compared with the independently surveyed course under the published scan poses. Among 10,200 candidate 30-cm square patches, the robot map accepted 190 under a five-of-nine-cell coverage rule and a 10-cm height-range limit. Under the same rule, the survey supported 103, contradicted 14 and left 73 unresolved. Requiring all nine survey cells on those same patches changed the counts to 12, one and 177. A separate roadway-stereo comparison showed a similar loss of corroboration for complete paths. The observations quantify which geometric decisions the second map can test. They contain no executed foot contacts from which to estimate slip or stepping risk.
+A course survey can check whether a patch looks level only where it has measured the floor. Thirty lidar scans from one ANYmal C traverse yielded 10,200 candidate scan–tile observations. After per-scan registration to the survey, 190 tiles had at least five occupied robot cells and an observed height range of at most 0.10 m. With the same five-cell coverage requirement, the survey supported 104 selections, contradicted 13 and left 73 unresolved. Requiring complete survey coverage made only 13 of those 190 selections assessable. Placing the same scans with onboard motion and a single opening survey anchor gave 194 selections, with 77 supported, 49 contradicted and 68 unresolved. Both how much the survey observes and how the scans are placed affect the apparent agreement on this traverse.
 
 [Paper (PDF)](manuscript.pdf) · [Editable text](manuscript.md) · [Methods and study files](study/README.md) · [Manuscript history](study/VERSION.md)
 
-[Author-owned software license](LICENSE) · [Third-party terms](LICENSING.md) · [Previous version](https://github.com/VEDANT1602/foothold-margin-planning/tree/51d3960f8c0c38fe21378fa0a85c2e04613bd6e0)
+[Author-owned software license](LICENSE) · [Third-party terms](LICENSING.md) · [Previous version](https://github.com/VEDANT1602/foothold-margin-planning/tree/2e7d668bf2e9a99f13f74f270c2f11029a3a180a)

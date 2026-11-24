@@ -1,10 +1,3 @@
-# Licensing and third-party material
+# Licensing and data access
 
-The root MIT license applies to the study software for which Vedant Thaker holds the rights and to its accompanying software documentation. Third-party code and data retain their applicable notices and terms. References to publications convey no license to their contents.
-
-The revised default tree contains the authored route-planning code. The separately cited, earlier commit preserves NVIDIA SOMA source with its original SPDX notices and upstream license at that pinned revision. Any further upstream package terms remain in force. Any new analysis scripts authored for this study are covered only insofar as their rights belong to the author.
-
-
-## Current study files
-
-The root MIT license covers the author-owned software. Study-specific attributions, acquisition instructions and any additional terms on third-party data and derivative products accompany the files under [study](study/README.md). Original source articles, images, trained model weights and participant data remain subject to their respective providers’ terms.
+The MIT license covers the original study software to the extent that the author holds the rights. The CERBERUS sensor data and trajectories and the DARPA survey remain with their providers. This supplement distributes the analysis code, a file-identification manifest and aggregate scan-level results. It contains no sensor packets, survey points, pose coordinates or third-party implementations. Refer to the [CERBERUS record](https://doi.org/10.3929/ethz-b-000552248) and the [DARPA survey repository](https://github.com/subtchallenge/systems_finals_ground_truth) for their respective access terms. The CERBERUS record is marked “In Copyright – Non-Commercial Use Permitted.” The MIT license does not extend to these external inputs.

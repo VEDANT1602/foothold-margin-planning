@@ -1,11 +1,15 @@
 # Preparation record
 
-The research question and author-supplied disclosures are attributed to Vedant Thaker. The public working version dated 21 November 2026 records new analysis undertaken in response to his study-specific critique. The methods, results and source checks were prepared with assistance from OpenAI Codex. The byline identifies the human author. This record does not certify independent personal inspection, peer review, or final submission approval.
+Vedant Thaker supplied the research question and requested the focus on quadruped measurements, the examination of registration dependence and verification of the cited uncertainty figures. OpenAI Codex assisted with scan decoding, analysis implementation and execution, numerical and citation checks, and manuscript drafting.
 
-An independent priority-queue search checked shortest-path costs and infeasibility decisions on 400 test masks. An independent recount checks all 34,740 route records, partitions and reference-feasible rejections. The checks establish internal consistency; KITTI’s laser reference supplies the map-level comparison.
+The first manuscript PDF in the public repository dates to November 18, 2026. Subsequent reconstruction and the November 22 comparison use external CERBERUS records. The author-reported October dates identify the original research window. The one-pose and ten-second alignment calculations were conducted in November. The ten-second window was selected as a sensitivity analysis after seeing the one-pose result. The comparison uses the same traverse, course survey and thirty scans as the registered analysis. The paper has no independent foot-contact labels.
 
-The supplement README identifies the inputs and computations needed to inspect the numerical results. Earlier public material is retained at https://github.com/VEDANT1602/foothold-margin-planning/tree/6e6751dac579e40a6da626b90d13b8f34ccf6a48 .
+The verified numerical results and source files are identified in the [study README](README.md). [Prior public manuscript and study history](https://github.com/VEDANT1602/foothold-margin-planning/tree/2e7d668bf2e9a99f13f74f270c2f11029a3a180a).
 
-## Current work
+## Date verification on November 22, 2026
 
-Vedant Thaker is the sole author and set the research question. OpenAI Codex assisted with decoding the onboard lidar, comparing scan and survey measurements, processing the roadway stereo data, implementing the planning comparisons and drafting the analysis.
+The author reports October 5–21, 2026 for the original work. The earliest public commit follows the end of the author-reported interval. Work during that interval cannot be verified from this history. The [first PDF commit](https://github.com/VEDANT1602/foothold-margin-planning/commit/98b34ecfee06e576bf31713ae468f51aee794f7e), the November 20 review copy, and the November 21 and 22 manuscript versions are recorded separately in [the manuscript history](VERSION.md).
+
+## November 24 editorial work
+
+Vedant Thaker supplied the critique and requested this revision. OpenAI Codex assisted with the analysis checks and revised prose. The manuscript describes the study-specific work and its limitations.
